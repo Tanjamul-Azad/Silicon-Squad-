@@ -1,33 +1,23 @@
-import cv2
+import serial
+import time
 
-cap = cv2.VideoCapture(0)   # or try 1 if 0 fails
-print(cap.isOpened())
-cap.release()
+# Adjust serial port if necessary
+ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+time.sleep(2)  # allow Arduino reset
 
+try:
+    while True:
+        line = ser.readline().decode('utf-8').strip()
+        if line:
+            parts = line.split(",")
+            if len(parts) == 4:
+                gas_value = int(parts[0])         # MQ-2 analog
+                gas_detected = int(parts[1])      # MQ-2 digital
+                flame_detected = int(parts[2])    # Flame sensor
+                temperature = float(parts[3])     # DS18B20
 
-cap = cv2.VideoCapture(0)
+                print(f"Gas: {gas_value} | Gas Det: {gas_detected} | Flame: {flame_detected} | Temp: {temperature:.2f} °C")
 
-if not cap.isOpened():
-    print("Error: Could not open camera.")
-    exit()
-
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Error: Failed to grab frame.")
-        break
-
-    cv2.imshow('Camera Feed', frame)
-
-    key = cv2.waitKey(1) & 0xFF
-
-    if key == ord('c'):
-        photo_filename = '/home/user/Desktop/care_companion/photo.jpg'
-        cv2.imwrite(photo_filename, frame)
-        print(f"📸 Photo captured and saved as '{photo_filename}'!")
-
-    if key == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+except KeyboardInterrupt:
+    ser.close()
+    print("Exiting...")
